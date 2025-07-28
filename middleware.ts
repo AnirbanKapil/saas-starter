@@ -11,8 +11,28 @@ export default authMiddleware({
       return NextResponse.redirect(new URL("/sign-in",req.url))
     }
     if(auth.userId){
-      const user = await clerkClient.users.getUsers(auth.userId)
-      const role = user.publicMetadata.role as string | undefined
+      try {
+        const user = await clerkClient.users.getUsers(auth.userId)
+        const role = user.publicMetadata.role as string | undefined
+  
+        if(role === "admin" && req.nextUrl.pathname === "/dashboard"){
+          return NextResponse.redirect(new URL("/admin/dashboard",req.url))
+        }
+  
+        if(role !== "admin" && req.nextUrl.pathname.startsWith("/admin")){
+          return NextResponse.redirect(new URL("/dashboard",req.url))
+        }
+  
+        if(publicRoutes.includes(req.nextUrl.pathname)){
+          return NextResponse.redirect(new URL(
+            role === "admin" ? "/admin/dashboard" : "/dashboard",
+            req.url
+          ))
+        }
+      } catch (error) {
+        console.log(error)
+        return NextResponse.redirect(new URL ("/error",req.url))
+      }
     }
   }
   
