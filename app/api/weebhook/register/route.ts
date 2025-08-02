@@ -41,14 +41,31 @@ export async function POST(req:Request) {
     const eventType = evnt.type
 
     if(eventType === "user.created"){
-        const {email_addresses , primary_email_address_id} = evnt.data
+       try {
+         const {email_addresses , primary_email_address_id} = evnt.data
+ 
+         const primaryEmail = email_addresses.find(
+             (email) => email.id === primary_email_address_id
+         )
+ 
+         if(!primaryEmail){
+             return new Response("No primary email found",{status : 400})
+         }
 
-        const primaryEmail = email_addresses.find(
-            (email) => email.id === primary_email_address_id
-        )
+        const newUser = await prisma.user.create({
+            data : {
+                id : id!,
+                email : primaryEmail.email_address,
+                isSubscribed : false
+            }
+        })
+            console.log("New User created",newUser)
+       } catch (error) {
+            console.log("Error creating user in DB error --",error)
+            return new Response("Error creating user in database",{status : 400})          
+       }
 
-        if(!primaryEmail){
-            return new Response("No primary email found",{status : 400})
-        }
     }
+
+    return new Response("WebHook received successfully",{status : 200})
 }
