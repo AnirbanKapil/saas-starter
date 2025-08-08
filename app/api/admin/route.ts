@@ -1,10 +1,10 @@
 import { NextRequest , NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { clerkClient } from "../../../app/generated/prisma";
+import { auth , clerkClient } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
 
 export async function isAdmin (userId : string) {
-    const user = await clerkClient.users.getUser(userId)
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
     return user.privateMetadata.role === "admin"
 }
