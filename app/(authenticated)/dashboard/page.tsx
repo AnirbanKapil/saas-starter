@@ -75,7 +75,23 @@ function Dashboard() {
       console.log("Error uploading todo.Error--",error)
     }
    } 
-
+   
+   
+   const handleUpdateTodo = async (id : string , completed : boolean) => {
+    try {
+      const response = await fetch(`/api/todos/${id}`,{
+        headers : {"Content-Type" : "applicaton/json"},
+        method : "PUT",
+        body : JSON.stringify({completed})
+      })
+      if(!response.ok){
+        throw new Error("Filed to update todo")
+      }
+      await fetchTodos(currentPage)
+    } catch (error) {
+      console.log("Error updating todo.Error--",error)
+    }
+   }
 
     return (
     <div></div>
