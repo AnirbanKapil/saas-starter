@@ -2,24 +2,32 @@
 
 import { Todo } from '@/app/generated/prisma'
 import { useUser } from '@clerk/nextjs'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react
 import { useDebounceValue } from 'usehooks-ts'
+import { AlertTriangle } from "lucide-react"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input"
+import Link from 'next/link'
+import { TodoItem } from '@/components/ui/TodoItem'
+import { TodoForm } from '@/components/ui/TodoForm'
+import { Pagination } from "@/components/ui/pagination";
 
 function Dashboard() {
   
    const {user} = useUser()
    const [todos , setTodos] = useState<Todo[]>([])
-   const [totalPage,setTotalPage] = useState("")
+   const [totalPages, setTotalPages] = useState(1)
    const [currentPage,setCurrentPage] = useState(1)
    const [searchTerm , setSearchTerm] = useState("") 
-   const [loading,setLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
    const [isSubscribed,setIsSubscribed] = useState("")
 
    const [debounceSearchTerm] = useDebounceValue(searchTerm,300)
 
    const fetchTodos = useCallback(async (page : number) => {
      try {
-        setLoading(true)
+        setIsLoading(true)
         
         const response = await fetch(`/api/todos?page=${page}&search=${debounceSearchTerm}`)
         if(!response.ok){
@@ -28,13 +36,13 @@ function Dashboard() {
         
         const data = await response.json()
 
-        setTotalPage(data.totalPages)
+        setTotalPages(data.totalPages)
         setTodos(data.todos)
         setCurrentPage(data.currentPage)
-        setLoading(false)
+        setIsLoading(false)
      } catch (error) {
         console.log("error fetching todos . Error --",error)
-        setLoading(false)
+        setIsLoading(false)
      }
    } , [debounceSearchTerm])
 
@@ -56,10 +64,10 @@ function Dashboard() {
    useEffect(()=>{
     fetchTodos(1);
     fetchSubscription()
-   },[]) 
+   },[fetchTodos]) 
 
     
-   const handleAddTodos = async (title : string) => {
+   const handleAddTodo = async (title : string) => {
     try {
       const response = await fetch("/api/todos",{
         method : "POST",
@@ -100,7 +108,7 @@ function Dashboard() {
         method : "DELETE",
      })
      if(!response.ok){
-       throw new Error("Filed to delete todo")
+       throw new Error("Failed to delete todo")
      }
       await fetchTodos(currentPage)
    } catch (error) {
@@ -109,7 +117,72 @@ function Dashboard() {
    }
 
     return (
-    <div></div>
+    <div className="container mx-auto p-4 max-w-3xl mb-8">
+      <h1 className="text-3xl font-bold mb-8 text-center">
+        Welcome, {user?.emailAddresses[0].emailAddress}!
+      </h1>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Add New Todo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TodoForm onSubmit={(title) => handleAddTodo(title)} />
+        </CardContent>
+      </Card>
+      {!isSubscribed && todos.length >= 3 && (
+        <Alert variant="destructive" className="mb-8">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            You&apos;ve reached the maximum number of free todos.{" "}
+            <Link href="/subscribe" className="font-medium underline">
+              Subscribe now
+            </Link>{" "}
+            to add more.
+          </AlertDescription>
+        </Alert>
+      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Todos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Input
+            type="text"
+            placeholder="Search todos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mb-4"
+          />
+          {isLoading ? (
+            <p className="text-center text-muted-foreground">
+              Loading your todos...
+            </p>
+          ) : todos.length === 0 ? (
+            <p className="text-center text-muted-foreground">
+              You don&apos;t have any todos yet. Add one above!
+            </p>
+          ) : (
+            <>
+              <ul className="space-y-4">
+                {todos.map((todo: Todo) => (
+                  <TodoItem
+                    key={todo.id}
+                    todo={todo}
+                    onUpdate={handleUpdateTodo}
+                    onDelete={handleDeleteTodo}
+                  />
+                ))}
+              </ul>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => fetchTodos(page)}
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
